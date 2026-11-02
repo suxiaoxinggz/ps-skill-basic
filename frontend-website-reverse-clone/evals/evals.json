@@ -1,0 +1,20 @@
+{
+  "skill_name": "frontend-website-reverse-clone",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "我要把 atypica.ai 的首页克隆到我们自己的 Next.js App Router + Tailwind v4 项目里。采集证据我已经准备好了：docs/research/atypica/page-brief.md（section 地图 + tokens + 字号 + 资产清单 + 动效观察）、docs/research/atypica/page-text.md（源站全文案 dump）、以及 shots/ 下按滚动位置截的源站截图。请你按证据产出克隆实现：完整页面代码 + 拆分的 section 组件 + 全局样式/token，并把研究简报整理成一份规范文档。注意：整页截图对这种滚动触发的站点大部分是黑的，别拿它当依据。最后要列出残留差异和判定理由。",
+      "expected_output": "按证据产出的克隆实现（page + section 组件 + 全局样式）+ 规范化的研究简报 + 残留差异清单（每项含差异/原因/判定理由）。",
+      "files": [
+        "/Users/suxiaoxing/Desktop/app/ai-website-cloner-template/docs/research/atypica/page-brief.md",
+        "/Users/suxiaoxing/Desktop/app/ai-website-cloner-template/docs/research/atypica/page-text.md"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "我们要克隆竞品官网的三个页面：首页 /、定价 /pricing、关于 /about。遇到的麻烦是：源站是 Next.js 站，页面上 img 的 src 全是 /_next/image?url=...&w=...&q=... 这种包装过的地址，直接 curl 下来要么 400 要么拿到转码后的 avif，跟页面里看到的图对不上；另外三个页面之间有一堆共享组件（导航、footer、CTA 条），我不知道该谁拥有。请给我：一份源站 URL → 本地路由 → 归属文件的映射表，以及一个能重跑的资产下载脚本（要能还原包装过的 URL、带重试、报告真实 content-type、留失败清单）。",
+      "expected_output": "路由与文件归属映射表（含共享组件的 owner）+ 可重跑的资产下载脚本，脚本需还原 _next/image 包装、带重试与超时、报告真实 content-type、输出失败清单。",
+      "files": []
+    }
+  ]
+}

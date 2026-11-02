@@ -1,0 +1,160 @@
+/* ============================================================================
+   Editorial-Cinematic SaaS — design tokens + utility classes
+   由 atypica-editorial skill 的 scripts/init-design-tokens.mjs 铺进项目。
+
+   用法：在页面根元素（通常是 <body> 或页面包裹 div）加 class="atypica"，
+   然后在全局样式里 import 本文件。
+
+   三个可改点（改了要同步改全套，不要只改一半）：
+     1. --at-bg 的 chroma/hue —— 保持极低（<=0.01），它决定"有设计 vs 模板味"
+     2. --at-green —— 唯一 accent，全站只有一个
+     3. --font-display / --font-serif-accent / --font-mono-alt 三个字体变量
+        （由 next/font 注入，见脚本打印的接入说明）
+   ========================================================================== */
+
+.atypica {
+  --at-bg: oklch(21% 0.006 285.885);   /* 暗中性底：hue 285.885 给极微弱冷紫，别用纯黑 */
+  --at-fg: oklch(98.5% 0 0);
+  --at-green: oklch(87% 0.29 142.57);  /* 唯一 accent */
+  --at-card: oklch(23.5% 0 0);
+  --at-muted: oklch(26.9% 0 0);
+  --at-border: oklch(100% 0 0 / 10%);  /* 白 10% 发丝线 */
+
+  --at-display: var(--font-display), system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --at-serif: var(--font-serif-accent), "Times New Roman", serif;
+  --at-mono: var(--font-mono-alt), SFMono-Regular, monospace;
+
+  background: var(--at-bg);
+  color: var(--at-fg);
+}
+
+/* ---------- 字体角色 ---------- */
+.atypica .font-display { font-family: var(--at-display); }
+.atypica .font-serif-accent { font-family: var(--at-serif); }
+.atypica .font-mono-alt { font-family: var(--at-mono); }
+
+/* ---------- 排版刻度 ---------- */
+.atypica .at-eyebrow {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: oklch(100% 0 0 / 60%);
+}
+
+.atypica .at-h1 {
+  font-family: var(--at-display);
+  font-size: clamp(34px, 4.2vw, 60px);
+  line-height: 1.08;
+  font-weight: 500;
+  letter-spacing: 0.025em;
+}
+
+.atypica .at-h2 {
+  font-family: var(--at-display);
+  font-size: clamp(28px, 2.6vw, 36px);
+  line-height: 1.18;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+}
+
+/* ---------- 进场 reveal（配 ScrollReveal 客户端组件） ---------- */
+.atypica [data-reveal] {
+  opacity: 0;
+  transform: translateY(28px);
+  transition:
+    opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+.atypica [data-reveal].revealed {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .atypica [data-reveal] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* ---------- 工程网格背景（模型 / 方法论幕） ---------- */
+.atypica .at-grid-bg {
+  background-image:
+    linear-gradient(oklch(100% 0 0 / 3%) 1px, transparent 1px),
+    linear-gradient(90deg, oklch(100% 0 0 / 3%) 1px, transparent 1px);
+  background-size: 56px 56px;
+}
+
+/* ---------- logo marquee（信任条） ---------- */
+.atypica .at-marquee {
+  display: flex;
+  width: max-content;
+  animation: at-marquee 48s linear infinite;
+}
+.atypica .at-marquee:hover { animation-play-state: paused; }
+@keyframes at-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .atypica .at-marquee { animation: none; }
+}
+
+/* ---------- 打字机光标 ---------- */
+.atypica .at-caret {
+  display: inline-block;
+  width: 1px;
+  height: 1.1em;
+  background: currentColor;
+  vertical-align: -0.15em;
+  animation: at-blink 1s steps(1) infinite;
+}
+@keyframes at-blink {
+  50% { opacity: 0; }
+}
+
+/* ---------- 反相纸面卡四角工程十字标 ---------- */
+.atypica .at-tick {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: var(--at-green);
+}
+
+/* ---------- agent 思考中的呼吸点 ---------- */
+.atypica .at-thinking i {
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  border-radius: 9999px;
+  background: oklch(100% 0 0 / 55%);
+  animation: at-dot 1.2s ease-in-out infinite;
+}
+.atypica .at-thinking i:nth-child(2) { animation-delay: 0.15s; }
+.atypica .at-thinking i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes at-dot {
+  0%, 60%, 100% { opacity: 0.3; }
+  30% { opacity: 1; }
+}
+
+/* ---------- terminal 日志行（假产品 UI） ---------- */
+.atypica .at-exec {
+  font-family: var(--at-mono);
+  font-size: 12px;
+  color: var(--at-green);
+  letter-spacing: 0.01em;
+}
+
+/* ---------- CTA 唯一的辉光（全站只允许出现一次） ---------- */
+.atypica .at-glow {
+  background: radial-gradient(
+    60% 55% at 50% 62%,
+    oklch(45% 0.14 150 / 34%),
+    transparent 70%
+  );
+}
+
+/* ---------- 离页投影（只给白纸卡与窗口框，暗卡不要用） ---------- */
+.atypica .at-lift {
+  box-shadow: 0 40px 120px -40px rgba(0, 0, 0, 0.9);
+}

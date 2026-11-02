@@ -1,0 +1,7 @@
+{
+  "name": "frontend-website-reverse-clone",
+  "version": "1.0.0",
+  "description": "逆向克隆 / 复刻已存在网页的全流程 Skill。包含 Map → Observe → Extract → Build → Compare → QA 六阶段流程与采集/资产还原脚本，产出高质量可编辑本地代码。",
+  "author": "suxiaoxinggz",
+  "requires_api_key": false
+}
