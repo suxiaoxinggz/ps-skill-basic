@@ -1,0 +1,7 @@
+{
+  "name": "macos-app-dual-clone",
+  "version": "1.0.0",
+  "description": "macOS 应用双开/多开分身全流程 Skill。克隆 .app 改 BundleID 重签，覆盖钥匙串 -34018 登录失败修复（自编译 keychain shim）与 Electron 单实例锁秒退处理，适配微信、Muse、WorkBuddy 等。",
+  "author": "suxiaoxinggz",
+  "requires_api_key": false
+}
