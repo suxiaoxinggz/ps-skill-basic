@@ -1,0 +1,7 @@
+{
+  "name": "frontend-design-workflow",
+  "version": "1.0.0",
+  "description": "Mandatory end-to-end frontend design and development workflow. Orchestrates design read, intelligence, design system persistence, craft review, and runtime browser verification.",
+  "author": "suxiaoxinggz",
+  "requires_api_key": false
+}
