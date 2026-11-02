@@ -10,7 +10,7 @@
 | [`frontend-atypica-editorial`](frontend-atypica-editorial/) | 杂志式 SaaS 设计 × 电影感视觉叙事 × 交互式产品演示的设计语言，适用于高质感 AI/SaaS 官网首页与暗色 editorial 版式 | ❌ |
 | [`frontend-website-reverse-clone`](frontend-website-reverse-clone/) | 逆向克隆已存在网页：Map → Observe → Extract → Build → Compare → QA 六阶段，含采集与资产还原脚本，产出可编辑本地代码 | ❌ |
 | [`macos-app-dual-clone`](macos-app-dual-clone/) | macOS 应用双开/多开分身：克隆 `.app` 改 BundleID 重签 + 钥匙串 `-34018` 修复 + Electron 单实例锁处理（微信 / Muse / WorkBuddy 实测） | ❌ |
-| [`ps-skill-multiplesearch`](ps-skill-multiplesearch/) | 多搜索引擎聚合，17 个引擎（8 国内 + 9 海外），支持高级搜索算子、时间过滤、站内搜索、隐私引擎 | ❌ |
+| [`multi-search-engine`](multi-search-engine/) | 多搜索引擎聚合，17 个引擎（8 国内 + 9 海外），支持高级搜索算子、时间过滤、站内搜索、隐私引擎 | ❌ |
 
 ## 安装
 
