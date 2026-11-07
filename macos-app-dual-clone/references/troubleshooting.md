@@ -39,3 +39,25 @@ sample <pid> 3 -file /tmp/s.txt; sed -n '/Call graph/,/^$/p' /tmp/s.txt | head -
 # 确认原应用签名完好
 codesign -dv /Applications/<原>.app 2>&1 | grep -E "Identifier|Signature|TeamIdentifier"
 ```
+
+
+## MiniMax Code / Electron asar 身份写死（实战补充）
+
+**推荐**：阶段一克隆后运行 `scripts/minimax-asar-isolate.sh`（`--region cn|global` 或自定义 `--bundle-id/--userdata-name/--product-name`；支持 `--dry-run`；需 `node/npx`）。会自动处理 Helper ID、quarantine、asar 备份、`dist/main/config/app-identity.js`+`dist/main/index.js` 补丁、保留 unpacked 重打包与重签。手工步骤见 `SKILL.md` 阶段四。
+
+| 症状 | 原因 | 修法 |
+|---|---|---|
+| 打开分身后看到的是原账号/原数据，进程 `--user-data-dir` 指向 `~/Library/Application Support/MiniMax` | asar 内 `dist/main/index.js` / `app-identity` 在生产环境按内部逻辑决定 userData/App ID，未跟随 plist 改名 | 阶段四：补丁 `app-identity.js` + `index.js`，强制独立 `userData`（如 `MiniMax 2` / `MiniMax Global 2`），重打包 asar 并重签 |
+| 原版运行时分身“打不开/无新窗口”，进程不常驻 | `requestSingleInstanceLock()` + 身份/数据冲突；或原版已占用实例锁 | 确认原版完全退出后测试；仍冲突则做阶段四深度隔离（独立身份+独立 userData） |
+| 主 plist 改了但行为仍像原版 | `Frameworks/*Helper*.app` 的 Bundle ID 未改；或 asar/二进制内仍有旧 ID | 修正所有 Helper Info.plist 的 `CFBundleIdentifier` 前缀后重签；必要时补丁 asar（见阶段四） |
+| 想要国际版但分身总去中国区登录 | 源 `.app` 是 CN 构建（`com.minimax.agent.cn`、`minimax-cn`） | 必须从国际版 DMG/安装包提取（`com.minimax.agent`、`minimax`），复制为独立应用名后再克隆+隔离；不要覆盖国内版原程序 |
+| `asar extract` 报 `app.asar.unpacked` 缺少 x64/win 文件后退出码非 0 | unpacked 里缺部分跨平台预编译文件 | 检查目标 JS（如 `dist/main/index.js`）是否已解出；若已解出可继续补丁并重打包（`--unpack` 保留 natives） |
+| 原版升级后分身功能/隔离异常 | 分身是旧版副本；重克隆覆盖了 asar 补丁 | 基于升级后的对应版本重新克隆并重做 Helper/quarantine/asar 隔离补丁（用户数据目录通常可保留） |
+
+```bash
+# MiniMax 类验证
+/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "/Applications/MiniMax Code 2.app/Contents/Info.plist"
+/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "/Applications/MiniMax Code 2.app/Contents/Frameworks/MiniMax Code Helper.app/Contents/Info.plist"
+open "/Applications/MiniMax Code 2.app"; sleep 5
+ps aux | grep "MiniMax Code 2.app" | grep user-data-dir | head -1
+```
