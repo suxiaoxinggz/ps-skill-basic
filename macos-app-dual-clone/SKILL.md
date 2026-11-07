@@ -48,11 +48,14 @@ scripts/dual-clone.sh /Applications/WeChat.app WeChat2 com.tencent.xinWeChat2
 ```bash
 KEEP_BUNDLENAME=1 EXTRA_ENV="WORKBUDDY_INSTANCE_NUMBER=2 WORKBUDDY_CONFIG_DIR=/Users/xxx/.workbuddy-2" \
   scripts/dual-clone.sh /Applications/WorkBuddy.app WorkBuddy2 com.tencent.workbuddy.mac2
+# 遇到钥匙串 -34018/需独立钥匙串时加 WITH_SHIM=1
 ```
 
 - `CFBundleName` 必须保持原值（改名即 trap，原因未明、实测稳定复现）。
-- `WORKBUDDY_CONFIG_DIR` 做真正的隔离（含 Singleton 锁、会话、配置）；`WORKBUDDY_INSTANCE_NUMBER` 顺手区分显示名/deeplink。
+- `WORKBUDDY_CONFIG_DIR` 做真正的隔离（含 Chromium `userData`/session/log、Singleton/会话/配置等；实测 `--user-data-dir=<CONFIG_DIR>/app`）；`WORKBUDDY_INSTANCE_NUMBER` 顺手区分显示名/deeplink。
 - 登录态、聊天数据各自独立，原版零干扰。原版升级后重跑上面命令即可（env 由脚本重建，不会丢）。
+
+**同账号坑（WorkBuddy 实测）**：若分身进程已用独立 `--user-data-dir`/`WORKBUDDY_CONFIG_DIR` 但仍显示原账号，常见原因是**共享文件凭据**不在 config dir 下——如 `~/.workbuddy-key-fallback/connector-keys/*`。仅改 env 不够，需 `WITH_SHIM=1` 并使用更新后的 `scripts/kcshim.c`：它会把 `~/.workbuddy-key-fallback[/...]` 的 `open/openat` 重定向到 `$WORKBUDDY_CONFIG_DIR/workbuddy-key-fallback`（或 `~/.workbuddy-key-fallback-<KCSHIM_BUNDLE_ID>`），避免共用连接器/凭据。更新 shim 后需重编分身 dylib（或重跑 `WITH_SHIM=1` 克隆）并重启分身；若分身此前已用共享凭据登录，**退出登录/清理分身 `app` 会话后重登**才能变为独立账号（见 troubleshooting）。
 
 
 ## 阶段四：Electron 深度隔离（MiniMax Code 类，单实例 + asar 身份/userData 写死）

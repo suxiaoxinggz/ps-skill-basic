@@ -418,18 +418,23 @@ int my_sysctlbyname(const char *name, void *oldp, size_t *oldlenp, void *newp, s
 INTERPOSE(IORegistryEntryCreateCFProperty, IORegistryEntryCreateCFProperty);
 INTERPOSE(sysctlbyname, sysctlbyname);
 
-// ---- device-id file redirect (covers hardcoded-path readers) ----
+// ---- device-id / shared file-store redirect (covers hardcoded-path readers) ----
 // lsof only shows HELD-OPEN files: a ticket file read once at startup and
 // closed is invisible to it. If the SDK reads <home>/.workbuddy/device-id via
-// a hardcoded getpwuid-joined path (ignoring WORKBUDDY_CONFIG_DIR and $HOME),
-// neither the seed file nor the IOKit spoof matters. So: any open() whose
-// path ends in "/.workbuddy/device-id" (exactly — not .workbuddy-2/3) is
-// redirected to $WORKBUDDY_CONFIG_DIR/device-id. Forwarding uses the raw
-// SYS_open/SYS_openat traps: calling open() normally would recurse into
-// ourselves (interposition is process-global, dlsym is poisoned — see above).
-// fopen() needs no hook: libc's fopen reaches the open symbol internally.
+// a hardcoded path, neither the seed file nor the IOKit spoof matters. So:
+// 1) any open() whose path ends in "/.workbuddy/device-id" (exactly) is
+//    redirected to $WORKBUDDY_CONFIG_DIR/device-id.
+// 2) any path under "<home>/.workbuddy-key-fallback" (shared connector/key
+//    fallback store, outside WORKBUDDY_CONFIG_DIR) is redirected to a per-clone
+//    root so clones don't share the same account/connector keys. Preference:
+//    $WORKBUDDY_CONFIG_DIR/workbuddy-key-fallback (keeps data with instance),
+//    else $HOME/.workbuddy-key-fallback-<KCSHIM_BUNDLE_ID>.
+// Forwarding uses raw SYS_open/SYS_openat traps to avoid recursion (interpose
+// is process-global). fopen() reaches open internally.
 #include <fcntl.h>
 #include <stdarg.h>
+#include <sys/stat.h>
+#include <errno.h>
 
 static int isSharedDeviceId(const char *path) {
     if (!path) return 0;
@@ -444,14 +449,57 @@ static void redirDeviceId(char *out, size_t n) {
     snprintf(out, n, "%s/device-id", cd);
 }
 
+// Redirect "<...>/.workbuddy-key-fallback[/suffix]" -> per-clone fallback root.
+static int redirWorkbuddyKeyFallback(const char *path, char *out, size_t n) {
+    if (!path || !out || n == 0) return 0;
+    const char *needle = "/.workbuddy-key-fallback";
+    const char *t = strstr(path, needle);
+    if (!t) return 0;
+    size_t nlen = strlen(needle);
+    char next = t[nlen];
+    if (next != '\0' && next != '/') return 0; // avoid false prefix matches
+    const char *suffix = t + nlen; // "" or "/..."
+    const char *cd = getenv("WORKBUDDY_CONFIG_DIR");
+    const char *bid = getenv("KCSHIM_BUNDLE_ID");
+    if (cd && *cd) {
+        snprintf(out, n, "%s/workbuddy-key-fallback%s", cd, suffix);
+        return out[0] != 0;
+    }
+    if (bid && *bid) {
+        const char *home = getenv("HOME");
+        if (!home || !*home) home = "/Users/Shared";
+        // bundle id may contain dots; fine as directory component
+        snprintf(out, n, "%s/.workbuddy-key-fallback-%s%s", home, bid, suffix);
+        return out[0] != 0;
+    }
+    return 0;
+}
+
+static void ensureParentDir(const char *path) {
+    if (!path || !*path) return;
+    char tmp[1200]; snprintf(tmp, sizeof(tmp), "%s", path);
+    char *slash = strrchr(tmp, '/');
+    if (!slash || slash == tmp) return;
+    *slash = 0;
+    // best-effort mkdir -p for shallow clone dirs (connector-keys etc.)
+    for (char *p = tmp + 1; *p; p++) {
+        if (*p == '/') { *p = 0; mkdir(tmp, 0700); *p = '/'; }
+    }
+    mkdir(tmp, 0700);
+}
+
 int my_open(const char *path, int oflag, ...) {
     mode_t mode = 0;
     if (oflag & O_CREAT) { va_list ap; va_start(ap, oflag); mode = (mode_t)va_arg(ap, int); va_end(ap); }
     if (isSharedDeviceId(path)) {
         char np[1100]; redirDeviceId(np, sizeof(np));
-        if (np[0]) path = np;
-        // fall through to the raw trap with the redirected path
-        return syscall(SYS_open, path, oflag, mode);
+        if (np[0]) { if (oflag & O_CREAT) ensureParentDir(np); return syscall(SYS_open, np, oflag, mode); }
+    } else {
+        char np[1200];
+        if (redirWorkbuddyKeyFallback(path, np, sizeof(np))) {
+            if (oflag & O_CREAT) ensureParentDir(np);
+            return syscall(SYS_open, np, oflag, mode);
+        }
     }
     return syscall(SYS_open, path, oflag, mode);
 }
@@ -459,9 +507,17 @@ int my_open(const char *path, int oflag, ...) {
 int my_openat(int fd, const char *path, int oflag, ...) {
     mode_t mode = 0;
     if (oflag & O_CREAT) { va_list ap; va_start(ap, oflag); mode = (mode_t)va_arg(ap, int); va_end(ap); }
-    if (fd == AT_FDCWD && isSharedDeviceId(path)) {
-        char np[1100]; redirDeviceId(np, sizeof(np));
-        if (np[0]) path = np;
+    if (fd == AT_FDCWD) {
+        if (isSharedDeviceId(path)) {
+            char np[1100]; redirDeviceId(np, sizeof(np));
+            if (np[0]) { if (oflag & O_CREAT) ensureParentDir(np); return syscall(SYS_openat, fd, np, oflag, mode); }
+        } else {
+            char np[1200];
+            if (redirWorkbuddyKeyFallback(path, np, sizeof(np))) {
+                if (oflag & O_CREAT) ensureParentDir(np);
+                return syscall(SYS_openat, fd, np, oflag, mode);
+            }
+        }
     }
     return syscall(SYS_openat, fd, path, oflag, mode);
 }
